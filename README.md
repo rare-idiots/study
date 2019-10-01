@@ -1,2 +1,2 @@
-# rare-idiots
+# Rare Idiots
 Rare Idots' study materials
