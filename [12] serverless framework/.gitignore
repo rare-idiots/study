@@ -1,0 +1,15 @@
+# Logs
+npm-debug.log*
+
+# NPM
+node_modules/
+
+# Transpiled code
+public/build/
+
+# Dev tools
+.DS_Store
+.vscode
+.idea
+*.swp
+*.bak
