@@ -1,12 +1,18 @@
 ## Reflow & Repaint
 
+- Reflow , Repaint은 렌더링과 관련이 되어있다.
+- 그래서 먼저 렌더링 을 알아보고 Reflow, Repaint 를 알아보자 또, 성능 최적화를 위한 작업을 알아보겠다.
+
+<br/>
+
 ### 렌더링
 
-렌더링이란 서버로부터 HTML 파일을 받아 브라우저에 뿌려주는 과정이다.
-
-![rendering1](./rendering1.png)
+- 렌더링이란 서버로부터 HTML 파일을 받아 브라우저에 뿌려주는 과정이다.
+  <br/>
 
 ### 렌더링 순서
+
+![render-tree-construction.png](./render-tree-construction.png)
 
 1. HTML 문서를 파싱해서 DOM(Document Object Model) 트리를 만든다.
 
@@ -14,11 +20,13 @@
 
 3. DOM 트리와 CSSOM을 결합하여 렌더링 트리를 형성한다.
 
-4. 페이지를 보여준다.
+4. 렌더링 트리에서 레이아웃을 실행하여 각 노드의 기하학적 형태를 계산합니다.
 
-![render-tree-construction.png](./render-tree-construction.png)
+5. 페이지를 보여준다.
 
-#### DOM 트리 & CSSOM & 렌더 트리
+<br/>
+
+#### 렌더링 순서에서의 DOM 트리 & CSSOM & 렌더 트리 란??
 
 - DOM 트리 : html 을 파싱하여 나온 element 틀
 
@@ -26,13 +34,22 @@
 
 - 렌더 트리 : DOM 트리 와 CSSOM 을 합친것
 
-### 웹킷 & 게코 렌더링 순서
+<br/>
+
+### 대표 레이아웃 엔진인 웹킷 & 게코 렌더링 순서를 간단히 알아보자
 
 - 웹킷 (크롬, 오페라, 스윙, 웨일)
   ![rendering2](./rendering2.png)
 
+<br/>
+
 - 게코 (파이어폭스)
   ![rendering3](./rendering3.png)
+
+- 위에 웹킷 및 게코 브라우저 에서 어테치먼트 & 형상구축 후에 렌더트리 & 형상트리 부터가 리 플로우 리페인트 과정이다.
+- 그러면 Reflow 와 Repaint 를 알아보자
+
+<br/>
 
 ### Reflow
 
@@ -46,6 +63,8 @@
 
 - 어떠한 액션이나 이벤트에 따라 html 요소의 크기나 위치등 레이아웃 수치를 수정하면 그에 영향을 받는 자식 노드나 부모 노드들을 포함하여 Layout 과정을 다시 수행하게 됩니다. 이렇게 되면 Render Tree와 각 요소들의 크기와 위치를 다시 계산하게 됩니다. 이러한 과정을 Reflow라고 합니다.
 
+<br/>
+
 ### Repaint
 
 - Reflow 과정이 끝난 후 재 생성된 렌더 트리를 다시 그리게 되는데 이 과정을 Repaint 라 합니다.
@@ -56,7 +75,9 @@
 
 - Reflow만 수행되면 실제 화면에 반영되지 않습니다. Render Tree를 다시 화면에 그려주는 과정이 필요합니다. 결국은 Paint 단계가 다시 수행되는 것이며 이를 Repaint 라고 합니다.
 
-### 언제 호출되나??
+<br/>
+
+### 그러면 Reflow & Repaint 가 언제 호출되나??
 
 ##### Reflow
 
@@ -70,82 +91,76 @@
 ##### Repaint
 
 - 가시성이 변경되는순간 (opacity, background-color, visibility, outline)
-- Reflow 가 호출된 순간 뒤에
+- Reflow 가 호출된 순간 뒤에 호출된다.
 
-##### Code 로 구분해보자.
+##### Code 로 Reflow 와 Repaint를 구분해보자.
 
 ```
 var bodyStyle = document.body.style;
 
-bodyStyle.padding = "20px";
-bodyStyle.border = "10px solid red";
+bodyStyle.padding = "20px"; // Reflow, Repaint
+bodyStyle.border = "10px solid red"; // Reflow, Repaint
 
-bodyStyle.color = "blue";
-bstyle.backgroundColor = "#cc0000";
+bodyStyle.color = "blue"; // Repaint
+bstyle.backgroundColor = "#cc0000"; // Repaint
 
-bodyStyle.fontSize = "2em";
+bodyStyle.fontSize = "2em"; // Reflow, Repaint
 
-document.body.appendChild(document.createTextNode('Hello!'));
+document.body.appendChild(document.createTextNode('Hello!')); // Reflow, Repaint
 ```
 
-### 성능저하를 막아보자
+<br/>
 
-- 클래스 변경을 통해 스타일을 변경할 경우, 최대한 말단의 노드의 클래스를 변경한다.
+### Reflow 를 최소화 하여 성능저하를 막아보자
 
-  - 최대한 말단에 있는 노드를 변경함으로써, 리플로우의 영향을 최소화한다.
-    <br/>
+1. **클래스 변경을 통해 스타일을 변경할 경우, 최대한 말단의 노드의 클래스를 변경한다.**
 
-- 인라인 스타일을 사용하지 않는다.
+- 최대한 말단에 있는 노드를 변경함으로써, 리플로우의 영향을 최소화한다.
+  <br/>
 
-  - 스타일 속성을 통해 스타일을 설정하면, 리플로우가 발생한다.
-  - 엘리먼트의 클래스가 변경될 때 엘리먼트는 하나의 리플로우만 발생시킨다.
-  - 인라인 스타일은 HTML 이 다운로드될 때, 레이아웃에 영향을 미치면서 추가 리플로우를 발생시킨다.
-    <br/>
+2. **인라인 스타일을 사용하지 않는다.**
 
-- 애니메이션이 들어간 엘리먼트는 position: fixed 또는 position: absolute 로 지정한다.
+- 스타일 속성을 통해 스타일을 설정하면, 리플로우가 발생한다.
+- 엘리먼트의 클래스가 변경될 때 엘리먼트는 하나의 리플로우만 발생시킨다.
+- 인라인 스타일은 HTML 이 다운로드될 때, 레이아웃에 영향을 미치면서 추가 리플로우를 발생시킨다.
+  <br/>
 
-  - absolute 또는 fixed 위치인 엘리먼트는 다른 엘리먼트의 레이아웃에 영향을 미치지 않는다. (리플로우가 아닌 리페인트가 발생하는데, 이것은 훨씬 적은 비용이 든다.)
-    <br/>
+3. **애니메이션이 들어간 엘리먼트는 position: fixed 또는 position: absolute 로 지정한다.**
 
-- 부드러운 애니메이션이 성능을 저하시킨다.
+- absolute 또는 fixed 위치인 엘리먼트는 다른 엘리먼트의 레이아웃에 영향을 미치지 않는다. (리플로우가 아닌 리페인트가 발생하는데, 이것은 훨씬 적은 비용이 든다.)
+  <br/>
 
-  - 한 번에 1px 씩 엘리먼트를 이동하면 부드러워 보이지만, 성능이 떨어지는 디바이스는 말썽일 수 있다.
-  - 엘리먼트를 한 프레임당 4px 씩 이동하면 덜 부드럽게 보이겠지만, 리플로우 처리의 1/4만 필요하다.
-    <br/>
+4. **부드러운 애니메이션이 성능을 저하시킨다.**
 
-- 레이아웃을 위한 table 은 피한다.
+- 한 번에 1px 씩 엘리먼트를 이동하면 부드러워 보이지만, 성능이 떨어지는 디바이스는 말썽일 수 있다.
+- 엘리먼트를 한 프레임당 4px 씩 이동하면 덜 부드럽게 보이겠지만, 리플로우 처리의 1/4만 필요하다.
+  <br/>
 
-  - table 은 점진적으로 렌더링되지 않고, 모두 불려지고 계산된 다음에서야 렌더링이 된다. 또한, 작은 변경만으로도 테이블의 다른 모든 노드에 대한 리플로우가 발생한다.
-  - 레이아웃 용도가 아닌 데이터 표시 용도의 table 을 사용하더라고, table-layout: fixed 속성을 주는 것이 좋다. table-layout: fixed 를 사용하면, 열 너비가 머리글 행 내용을 기반으로 계산되기 때문이다.
-    <br/>
+5. **레이아웃을 위한 table 은 피한다.**
 
-- CSS 에서 Java Script 표현식을 사용하지 않는다.
+- table 은 점진적으로 렌더링되지 않고, 모두 불려지고 계산된 다음에서야 렌더링이 된다. 또한, 작은 변경만으로도 테이블의 다른 모든 노드에 대한 리플로우가 발생한다.
+- 레이아웃 용도가 아닌 데이터 표시 용도의 table 을 사용하더라고, table-layout: fixed 속성을 주는 것이 좋다. table-layout: fixed 를 사용하면, 열 너비가 머리글 행 내용을 기반으로 계산되기 때문이다.
+  <br/>
 
-  - IE 와 FF 는 모두 CSS 에서 Java Script 를 실행할 수 있다. IE 에서는 표현 기법과 HTC 동작 방법이 있고, FF 에서는 XBL 을 사용하는 방법이 있다. (이 방법은 CSS 에서 Java Script 를 직접 실행하지는 않지만, 그 효과는 동일하다.)
-  - 문서가 리플로우될 때마다 Java Script 표현식이 다시 계산된다.
-    <br/>
+6. **CSS 에서 Java Script 표현식을 사용하지 않는다.**
 
-- CSS 하위 셀렉터를 최소화한다.
+- IE 와 FF 는 모두 CSS 에서 Java Script 를 실행할 수 있다. IE 에서는 표현 기법과 HTC 동작 방법이 있고, FF 에서는 XBL 을 사용하는 방법이 있다. (이 방법은 CSS 에서 Java Script 를 직접 실행하지는 않지만, 그 효과는 동일하다.)
+- 문서가 리플로우될 때마다 Java Script 표현식이 다시 계산된다.
+  <br/>
 
-  - 사용하는 규칙이 적을수록 리플로우가 빠르다.
-  - gulp-uncss, grunt-uncss 와 같은 도구로 스타일 정의 및 파일 크기를 줄인다.
-    <br/>
+7. **CSS 하위 셀렉터를 최소화한다.**
 
-- 숨겨진 엘리먼트를 변경한다.
+- 사용하는 규칙이 적을수록 리플로우가 빠르다.
+- gulp-uncss, grunt-uncss 와 같은 도구로 스타일 정의 및 파일 크기를 줄인다.
+  <br/>
 
-  - display: none; 으로 숨겨진 엘리먼트는 변경될 때, 리페인트나 리플로우를 일으키지 않는다. 그렇기 때문에 엘리먼트를 표시하기 전에 엘리먼트를 변경한다.
-    <br/>
+8. **숨겨진 엘리먼트를 변경한다.**
 
-- Java Script 를 통해 리스트를 추가하는 경우, DOM Fragment 를 통해 추가한다.
+- display: none; 으로 숨겨진 엘리먼트는 변경될 때, 리페인트나 리플로우를 일으키지 않는다.
+- 그렇기 때문에 엘리먼트를 표시하기 전에 엘리먼트를 변경한다.
+  <br/>
 
-  - 3 개의 리스트를 추가하는 경우, 한 번에 하나씩 추가하면 최대 7 개의 리플로우가 발생한다.
-
-  <ul> 이 추가될 때
-  <li> 에 대해 3번
-  텍스트 노드에 대해 3번
-     <br/>
-
-- Java Script 를 통해 스타일을 변경할 경우, .cssText 를 사용하거나, 클래스를 변경한다.
+9. **Java Script 를 통해 스타일을 변경할 경우, .cssText 를 사용하거나, 클래스를 변경한다.**
 
 ```
 var el = document.getElementById('reflow-test');
@@ -175,10 +190,10 @@ el.className = 'changed';
 
 <br/>
 
-- 캐쉬를 활용한 Reflow 최소화.
+10. **캐쉬를 활용한 Reflow 최소화.**
 
-  - 브라우저는 레이아웃 변경을 큐에 저장했다가 한 번에 실행함으로써 리플로우를 최소화하는데, offset, scrollTop 과 같은 계산된 스타일 정보를 요청할 때마다 정확한 정보를 제공하기 위해 큐를 비우고, 모든 변경을 다시 적용한다.
-  - 이를 최소화하기 위해 수치에 대한 스타일 정보를 변수에 저장하여 정보 요청 횟수를 줄임으로써 리플로우를 최소화한다.
+- 브라우저는 레이아웃 변경을 큐에 저장했다가 한 번에 실행함으로써 리플로우를 최소화하는데, offset, scrollTop 과 같은 계산된 스타일 정보를 요청할 때마다 정확한 정보를 제공하기 위해 큐를 비우고, 모든 변경을 다시 적용한다.
+- 이를 최소화하기 위해 수치에 대한 스타일 정보를 변수에 저장하여 정보 요청 횟수를 줄임으로써 리플로우를 최소화한다.
 
 ```
 // Bad practice
@@ -198,12 +213,33 @@ for (let i = 0; i < len; i++) {
 }
 ```
 
-### 출처
+### 구글 개발자 도구에서 어느 시점에 Reflow Repaint 가 일어 나는지 알아보자.
+
+1. 참고용 사이트에 들어간다.
+   [https://codepen.io/hakimel/pen/vDnmp](https://codepen.io/hakimel/pen/vDnmp)
+
+2. 개발자 도구를 연다.
+
+3. Performance 탭으로 간다.
+
+4. JS 이벤트를 실행 시키기전 Recording 버튼을 누른다.
+
+5. 체크 박스 아무곳이나 눌러 JS 이벤트를 실행시킨다.
+
+6. Stop 버튼을 눌러 Recording 을 취소한다.
+
+7. 측정된 결과를 관찰한다.
+
+![rendering4.png](./rendering4.png)
+
+- 위의 결과를 보면 Rendering 및 Painting 을 알수있으며 첫번째 그래프에 마우수를 오버 하면 어떤 시점에 어떤 이벤트가 일어났는지 알수있다.
+
+- 또한 Recording 버튼옆에 Reload 버튼을 누르면 페이지를 새로고침하며 초기 Reflow & Repaint 가 일어나는걸 알수있다.
+
+### Reference
 
 - [https://developers.google.com/web/fundamentals/performance/critical-rendering-path/render-tree-construction?hl=ko](https://developers.google.com/web/fundamentals/performance/critical-rendering-path/render-tree-construction?hl=ko)
 
 - [https://yoonucho.github.io/review/2019/11/22/reflow&repaint.html](https://yoonucho.github.io/review/2019/11/22/reflow&repaint.html)
-
-- [https://tuhbm.github.io/2018/02/22/reflowAndRepaint/](https://tuhbm.github.io/2018/02/22/reflowAndRepaint/)
 
 - [https://dev.to/gopal1996/understanding-reflow-and-repaint-in-the-browser-1jbg](https://dev.to/gopal1996/understanding-reflow-and-repaint-in-the-browser-1jbg)
